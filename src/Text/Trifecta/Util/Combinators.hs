@@ -18,8 +18,12 @@ module Text.Trifecta.Util.Combinators
   , (<$!>)
   ) where
 
-import Data.ByteString      as Strict
-import Data.ByteString.Lazy as Lazy
+--import Data.ByteString      as Strict
+--import Data.ByteString.Lazy as Lazy
+import Data.Text as Strict
+import Data.Text.Lazy as Lazy
+import Data.Text.Internal.Fusion as Stream
+import Data.Text.Internal.Lazy.Fusion as LazyStream
 
 argmin :: Ord b => (a -> b) -> a -> a -> a
 argmin f a b
@@ -33,15 +37,15 @@ argmax f a b
   | otherwise = b
 {-# INLINE argmax #-}
 
-fromLazy :: Lazy.ByteString -> Strict.ByteString
-fromLazy = Strict.concat . Lazy.toChunks
+fromLazy :: Lazy.Text -> Strict.Text
+fromLazy = Lazy.toStrict
 
-toLazy :: Strict.ByteString -> Lazy.ByteString
-toLazy = Lazy.fromChunks . return
+toLazy :: Strict.Text -> Lazy.Text
+toLazy = Lazy.fromStrict
 
-takeLine :: Lazy.ByteString -> Lazy.ByteString
-takeLine s = case Lazy.elemIndex 10 s of
-  Just i -> Lazy.take (i + 1) s
+takeLine :: Lazy.Text -> Lazy.Text
+takeLine s = case Stream.findIndex (== '\n') (LazyStream.stream s) of
+  Just i -> Lazy.take (fromIntegral i + 1) s
   Nothing -> s
 
 infixl 4 <$!>

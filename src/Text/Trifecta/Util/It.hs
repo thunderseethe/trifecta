@@ -30,8 +30,8 @@ module Text.Trifecta.Util.It
 import Control.Comonad
 import Control.Monad
 
-import Data.ByteString                as Strict
-import Data.ByteString.Lazy           as Lazy
+import Data.Text as Strict
+import Data.Text.Lazy as Lazy
 import Data.Profunctor
 import Text.Trifecta.Delta
 import Text.Trifecta.Rope
@@ -210,7 +210,7 @@ runIt _ i (It a k) = i a k
 -- point.
 --
 -- >>> :set -XOverloadedStrings
--- >>> let secondLine = fillIt Nothing (const Just) (delta ("foo\nb" :: Strict.ByteString))
+-- >>> let secondLine = fillIt Nothing (const Just) (delta ("foo\nb" :: Strict.Text))
 --
 -- >>> extract secondLine
 -- Nothing
@@ -223,7 +223,7 @@ runIt _ i (It a k) = i a k
 --
 -- >>> extract (simplifyIt secondLine (ropeBS "foo\nbar\nbaz"))
 -- Just "ar\n"
-fillIt :: r -> (Delta -> Strict.ByteString -> r) -> Delta -> It Rope r
+fillIt :: r -> (Delta -> Strict.Text -> r) -> Delta -> It Rope r
 fillIt kf ks n = wantIt kf $ \r ->
   (# bytes n < bytes (rewind (delta r))
   ,  grabLine n r kf ks #)
@@ -231,7 +231,7 @@ fillIt kf ks n = wantIt kf $ \r ->
 -- | Return the text of the line that contains a given position
 --
 -- >>> :set -XOverloadedStrings
--- >>> let secondLine = rewindIt (delta ("foo\nb" :: Strict.ByteString))
+-- >>> let secondLine = rewindIt (delta ("foo\nb" :: Strict.Text))
 --
 -- >>> extract secondLine
 -- Nothing
@@ -244,7 +244,7 @@ fillIt kf ks n = wantIt kf $ \r ->
 --
 -- >>> extract (simplifyIt secondLine (ropeBS "foo\nbar\nbaz"))
 -- Just "bar\n"
-rewindIt :: Delta -> It Rope (Maybe Strict.ByteString)
+rewindIt :: Delta -> It Rope (Maybe Strict.Text)
 rewindIt n = wantIt Nothing $ \r ->
   (# bytes n < bytes (rewind (delta r))
   ,  grabLine (rewind n) r Nothing $ const Just #)
@@ -265,7 +265,7 @@ rewindIt n = wantIt Nothing $ \r ->
 --
 -- >>> extract (simplifyIt secondLine (ropeBS "foo\nbar\nbaz"))
 -- "bar\n"
-sliceIt :: Delta -> Delta -> It Rope Strict.ByteString
+sliceIt :: Delta -> Delta -> It Rope Strict.Text
 sliceIt !i !j = wantIt mempty $ \r ->
   (# bj < bytes (rewind (delta r))
   ,  grabRest i r mempty $ const $ Util.fromLazy . Lazy.take (fromIntegral (bj - bi)) #)

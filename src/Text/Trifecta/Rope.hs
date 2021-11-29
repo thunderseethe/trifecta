@@ -21,7 +21,7 @@
 module Text.Trifecta.Rope
   ( Rope(..)
   , rope
-  , ropeBS
+  , ropeT
   , Strand(..)
   , strand
   , strands
@@ -29,10 +29,14 @@ module Text.Trifecta.Rope
   , grabLine
   ) where
 
-import           Data.ByteString        (ByteString)
-import qualified Data.ByteString        as Strict
-import qualified Data.ByteString.Lazy   as Lazy
-import qualified Data.ByteString.UTF8   as UTF8
+import           Data.Text              (Text)
+import qualified Data.Text              as Strict
+import qualified Data.Text.Lazy         as Lazy
+
+--import           Data.ByteString        (ByteString)
+--import qualified Data.ByteString        as Strict
+--import qualified Data.ByteString.Lazy   as Lazy
+--import qualified Data.ByteString.UTF8   as UTF8
 import           Data.Data
 import           Data.FingerTree        as FingerTree
 import           Data.Foldable          (toList)
@@ -57,13 +61,13 @@ import Text.Trifecta.Util.Combinators as Util
 
 -- A 'Strand' is a chunk of data; many 'Strand's together make a 'Rope'.
 data Strand
-  = Strand {-# UNPACK #-} !ByteString !Delta -- ^ Data of a certain length
-  | Skipping !Delta                          -- ^ Absence of data of a certain length
+  = Strand {-# UNPACK #-} !Text !Delta -- ^ Data of a certain length
+  | Skipping !Delta                    -- ^ Absence of data of a certain length
   deriving (Eq, Show, Data, Generic)
 
 -- | Construct a single 'Strand' out of a 'ByteString'.
-strand :: ByteString -> Strand
-strand bs = Strand bs (delta bs)
+strand :: Text -> Strand
+strand txt = Strand txt (delta txt)
 
 instance Measured Delta Strand where
   measure (Strand _ s) = delta s
@@ -84,8 +88,9 @@ rope :: FingerTree Delta Strand -> Rope
 rope r = Rope (measure r) r
 
 -- | Construct a 'Rope' out of a single 'ByteString' strand.
-ropeBS :: ByteString -> Rope
-ropeBS = rope . singleton . strand
+
+ropeT :: Text -> Rope
+ropeT = rope . singleton . strand
 
 strands :: Rope -> FingerTree Delta Strand
 strands (Rope _ r) = r
@@ -111,7 +116,7 @@ grabRest
     :: Delta -- ^ Initial offset
     -> Rope  -- ^ Input
     -> r     -- ^ Default value if there is no input left
-    -> (Delta -> Lazy.ByteString -> r)
+    -> (Delta -> Lazy.Text -> r)
         -- ^ If there is some input left, create an @r@ out of the data from the
         -- initial offset until the end
     -> r
@@ -140,7 +145,7 @@ grabLine
     :: Delta -- ^ Initial offset
     -> Rope  -- ^ Input
     -> r     -- ^ Default value if there is no input left
-    -> (Delta -> Strict.ByteString -> r)
+    -> (Delta -> Strict.Text -> r)
         -- ^ If there is some input left, create an @r@ out of the data from the
         -- initial offset until the end of the line
     -> r
@@ -171,12 +176,12 @@ instance Reducer Strand Rope where
   cons s (Rope mt t) = Rope (delta s `mappend` mt) (s <| t)
   snoc (Rope mt t) !s = Rope (mt `mappend` delta s) (t |> s)
 
-instance Reducer Strict.ByteString Rope where
+instance Reducer Strict.Text Rope where
   unit = unit . strand
   cons = cons . strand
   snoc r = snoc r . strand
 
 instance Reducer [Char] Rope where
-  unit = unit . strand . UTF8.fromString
-  cons = cons . strand . UTF8.fromString
-  snoc r = snoc r . strand . UTF8.fromString
+  unit = unit . strand . Strict.pack
+  cons = cons . strand . Strict.pack
+  snoc r = snoc r . strand . Strict.pack

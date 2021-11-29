@@ -35,7 +35,8 @@ import Data.Word
 import Data.Function (on)
 import Data.FingerTree hiding (empty)
 import Data.ByteString as Strict hiding (empty)
-import qualified Data.ByteString.UTF8 as UTF8
+import Data.Text as StrictTxt hiding(empty)
+import Data.Text.Unsafe
 import GHC.Generics
 import Prettyprinter hiding (column, line')
 
@@ -46,6 +47,9 @@ class HasBytes t where
 
 instance HasBytes ByteString where
   bytes = fromIntegral . Strict.length
+
+instance HasBytes Text where
+  bytes = fromIntegral . lengthWord16
 
 instance (Measured v a, HasBytes v) => HasBytes (FingerTree v a) where
   bytes = bytes . measure
@@ -80,7 +84,7 @@ data Delta
     -- , number of bytes since the last newline )
     -- @
 
-  | Directed !ByteString
+  | Directed !Text
              {-# UNPACK #-} !Int64
              {-# UNPACK #-} !Int64
              {-# UNPACK #-} !Int64
@@ -109,7 +113,7 @@ prettyDelta d = case d of
     Columns c _         -> go interactive 0 c
     Tab x y _           -> go interactive 0 (nextTab x + y)
     Lines l c _ _       -> go interactive l c
-    Directed fn l c _ _ -> go (UTF8.toString fn) l c
+    Directed fn l c _ _ -> go (StrictTxt.unpack fn) l c
   where
     go
         :: String -- Source description
@@ -217,7 +221,10 @@ instance HasDelta Word8 where
     | otherwise              = Columns 0 1
 
 instance HasDelta ByteString where
-  delta = foldMap delta . unpack
+  delta = foldMap delta . Strict.unpack
+
+instance HasDelta Text where
+  delta = StrictTxt.foldr (\c m -> delta c <> m) mempty
 
 instance (Measured v a, HasDelta v) => HasDelta (FingerTree v a) where
   delta = delta . measure

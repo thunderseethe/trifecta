@@ -34,7 +34,7 @@ module Text.Trifecta.Parser
   , parseFromFile
   , parseFromFileEx
   , parseString
-  , parseByteString
+  , parseText
   , parseTest
   ) where
 
@@ -42,14 +42,13 @@ import Control.Applicative as Alternative
 import Control.Monad (MonadPlus(..), ap, join)
 import Control.Monad.IO.Class
 import qualified Control.Monad.Fail as Fail
-import Data.ByteString as Strict hiding (empty, snoc)
-import Data.ByteString.UTF8 as UTF8
 import Data.Maybe (fromMaybe, isJust)
 #if !(MIN_VERSION_base(4,11,0))
 import Data.Semigroup
 #endif
 import Data.Semigroup.Reducer
--- import Data.Sequence as Seq hiding (empty)
+import Data.Text as Strict hiding (empty, snoc)
+import Data.Text.IO as TIO
 import Data.Set as Set hiding (empty, toList)
 import Prettyprinter as Pretty hiding (line)
 import System.IO
@@ -102,10 +101,10 @@ newtype Parser a = Parser
   { unparser :: forall r.
        (a -> Err -> It Rope r)
     -> (Err -> It Rope r)
-    -> (a -> Set String -> Delta -> ByteString -> It Rope r)  -- committed success
+    -> (a -> Set String -> Delta -> Text -> It Rope r)  -- committed success
     -> (ErrInfo -> It Rope r)                                 -- committed err
     -> Delta
-    -> ByteString
+    -> Text
     -> It Rope r
   }
 
@@ -231,7 +230,7 @@ instance LookAheadParsing Parser where
 
 instance CharParsing Parser where
   satisfy f = Parser $ \ _ ee co _ d bs ->
-    case UTF8.uncons $ Strict.drop (fromIntegral (columnByte d)) bs of
+    case Strict.uncons $ Strict.drop (fromIntegral (columnByte d)) bs of
       Nothing        -> ee (failed "unexpected EOF")
       Just (c, xs)
         | not (f c)       -> ee mempty
@@ -334,7 +333,7 @@ stepIt = go mempty where
 data Stepping a
   = EO a Err
   | EE Err
-  | CO a (Set String) Delta ByteString
+  | CO a (Set String) Delta Text
   | CE ErrInfo
 
 -- | Incremental parsing. A 'Step' can be supplied with new input using 'feed',
@@ -352,7 +351,7 @@ stepParser (Parser p) d0 = joinStep $ stepIt $ do
   co a es d' bs = Pure (CO a es d' bs)
   ce errInf     = Pure (CE errInf)
 
-  go :: ByteString -> Stepping a -> Result a
+  go :: Text -> Stepping a -> Result a
   go _   (EO a _)     = Success a
   go bs0 (EE e)       = Failure $
                           let errDoc = explain (renderingCaret d0 bs0) e
@@ -409,18 +408,18 @@ parseFromFile p fn = do
 -- >     Success a  -> print (sum a)
 parseFromFileEx :: MonadIO m => Parser a -> String -> m (Result a)
 parseFromFileEx p fn = do
-  s <- liftIO $ Strict.readFile fn
-  return $ parseByteString p (Directed (UTF8.fromString fn) 0 0 0 0) s
+  s <- liftIO $ TIO.readFile fn
+  return $ parseText p (Directed (Strict.pack fn) 0 0 0 0) s
 
 -- | Fully parse a 'UTF8.ByteString' to a 'Result'.
 --
 -- @parseByteString p delta i@ runs a parser @p@ on @i@.
-parseByteString
+parseText
     :: Parser a
     -> Delta -- ^ Starting cursor position. Usually 'mempty' for the beginning of the file.
-    -> UTF8.ByteString
+    -> Text
     -> Result a
-parseByteString = runParser
+parseText = runParser
 
 -- | Fully parse a 'String' to a 'Result'.
 --
@@ -433,6 +432,6 @@ parseString
 parseString = runParser
 
 parseTest :: (MonadIO m, Show a) => Parser a -> String -> m ()
-parseTest p s = case parseByteString p mempty (UTF8.fromString s) of
+parseTest p s = case parseText p mempty (Strict.pack s) of
   Failure xs -> liftIO $ renderIO stdout $ renderPretty 0.8 80 $ (_errDoc xs) <> line' -- TODO: retrieve columns
   Success a  -> liftIO (print a)

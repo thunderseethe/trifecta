@@ -35,7 +35,8 @@ import Control.Monad.Trans.State.Lazy    as Lazy
 import Control.Monad.Trans.State.Strict  as Strict
 import Control.Monad.Trans.Writer.Lazy   as Lazy
 import Control.Monad.Trans.Writer.Strict as Strict
-import Data.ByteString                   as Strict hiding (span)
+--import Data.ByteString                   as Strict hiding (span)
+import Data.Text as Strict
 #if !(MIN_VERSION_base(4,11,0))
 import Data.Semigroup
 #endif
@@ -52,13 +53,13 @@ import Text.Trifecta.Rendering
 -- 3) the ability to use 'sliced' on any parser.
 class (MonadPlus m, TokenParsing m) => DeltaParsing m where
   -- | Retrieve the contents of the current line (from the beginning of the line)
-  line :: m ByteString
+  line :: m Text
 
   -- | Retrieve the current position as a 'Delta'.
   position :: m Delta
 
   -- | Run a parser, grabbing all of the text between its start and end points
-  slicedWith :: (a -> Strict.ByteString -> r) -> m a -> m r
+  slicedWith :: (a -> Strict.Text -> r) -> m a -> m r
 
   -- | Retrieve a 'Rendering' of the current line noting this position, but not
   -- placing a 'Caret' there.
@@ -67,7 +68,7 @@ class (MonadPlus m, TokenParsing m) => DeltaParsing m where
   {-# inlinable rend #-}
 
   -- | Grab the remainder of the current line
-  restOfLine :: m ByteString
+  restOfLine :: m Text
   restOfLine = Strict.drop . fromIntegral . columnByte <$> position <*> line
   {-# inlinable restOfLine #-}
 
@@ -169,7 +170,7 @@ instance (MonadPlus m, DeltaParsing m) => DeltaParsing (IdentityT m) where
 
 -- | Run a parser, grabbing all of the text between its start and end points and
 -- discarding the original result
-sliced :: DeltaParsing m => m a -> m ByteString
+sliced :: DeltaParsing m => m a -> m Text
 sliced = slicedWith (\_ bs -> bs)
 {-# inlinable sliced #-}
 
@@ -196,7 +197,7 @@ spanned p = (\s l a e -> a :~ Span s e l) <$> position <*> line <*> p <*> positi
 {-# inlinable spanned #-}
 
 -- | Grab a fixit.
-fixiting :: DeltaParsing m => m Strict.ByteString -> m Fixit
+fixiting :: DeltaParsing m => m Text -> m Fixit
 fixiting p = (\(r :~ s) -> Fixit s r) <$> spanned p
 {-# inlinable fixiting #-}
 

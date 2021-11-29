@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# language DeriveDataTypeable    #-}
 {-# language DeriveGeneric         #-}
 {-# language FlexibleInstances     #-}
@@ -61,8 +62,11 @@ import           Control.Applicative
 import           Control.Comonad
 import           Control.Lens
 import           Data.Array
-import           Data.ByteString                              as B hiding (any, empty, groupBy)
-import qualified Data.ByteString.UTF8                         as UTF8
+import           Data.Text as T hiding (any, empty, groupBy)
+import           Data.Text.Internal.Fusion as S
+import           Data.Text.Internal.Fusion.Common
+import           Data.Text.Internal.Fusion.Size
+import           Data.Text.Unsafe
 import           Data.Data
 import           Data.Foldable
 import           Data.Function                                (on)
@@ -251,21 +255,47 @@ class Source t where
   -- @
 
 instance Source String where
-  source s
+  source = source . pack
+  {-source s
     | P.elem '\n' s = (ls, bs, draw [] 0 0 s')
-    | otherwise           = ( ls + fromIntegral (P.length end), bs, draw [SetColor Foreground Vivid Blue, SetConsoleIntensity BoldIntensity] 0 ls end . draw [] 0 0 s')
+    | otherwise     = ( ls + fromIntegral (P.length end), bs, draw [SetColor Foreground Vivid Blue, SetConsoleIntensity BoldIntensity] 0 ls end . draw [] 0 0 s')
     where
       end = "<EOF>"
       s' = go 0 s
-      bs = fromIntegral $ B.length $ UTF8.fromString $ P.takeWhile (/='\n') s
+      bs = fromIntegral $ lengthWord16 $ T.pack $ P.takeWhile (/='\n') s
       ls = fromIntegral $ P.length s'
+
       go n ('\t':xs) = let t = 8 - mod n 8 in P.replicate t ' ' ++ go (n + t) xs
       go _ ('\n':_)  = []
       go n (x:xs)    = x : go (n + 1) xs
-      go _ []        = []
+      go _ []        = []-}
 
-instance Source ByteString where
-  source = source . UTF8.toString
+--instance Source ByteString where
+--  source = source . UTF8.toString
+
+instance Source Text where
+  source s
+    | Just _ <- T.find (== '\n') s = (ls, bs, draw [] 0 0 s')
+    | otherwise                    = (ls + fromIntegral (P.length end), bs, draw [SetColor Foreground Vivid Blue, SetConsoleIntensity BoldIntensity] 0 ls end . draw [] 0 0 s')
+    where
+      end = "<EOF>"
+      s' = unstreamList $ go $ stream s
+      bs = fromIntegral $ lengthWord16 $ T.takeWhile (/='\n') s
+      ls = fromIntegral $ P.length s'
+      
+      
+      go (Stream next0 s0 _) =
+        let
+          next (!n, 0, !s1) = case next0 s1 of
+           Done -> Done
+           Skip s2 -> next (n, 0, s2)
+           Yield c s2 -> 
+             case c of
+              '\t' -> let t = 8 - mod n 8 in Yield ' ' (n, t - 1, s2)
+              '\n' -> Done
+              _ -> Yield c (n + 1, 0, s2)
+          next (!n, !t, !s1) = Yield ' ' (n, t - 1, s1)
+        in Stream next (0 :: Int, 0 :: Int, s0) unknownSize
 
 -- | create a drawing surface
 rendered :: Source s => Delta -> s -> Rendering
@@ -340,7 +370,7 @@ instance Renderable (Rendered a) where
 -- >>> unAnnotate (prettyRendering (addCaret (Columns 35 35) exampleRendering))
 -- 1 | int main(int argc, char ** argv) { int; }<EOF>
 --   |                                    ^
-data Caret = Caret !Delta {-# UNPACK #-} !ByteString deriving (Eq,Ord,Show,Data,Generic)
+data Caret = Caret !Delta {-# UNPACK #-} !Text deriving (Eq,Ord,Show,Data,Generic)
 
 class HasCaret t where
   caret :: Lens' t Caret
@@ -376,7 +406,7 @@ instance Reducer Caret Rendering where
 instance Semigroup Caret where
   a <> _ = a
 
-renderingCaret :: Delta -> ByteString -> Rendering
+renderingCaret :: Delta -> Text -> Rendering
 renderingCaret d bs = addCaret d $ rendered d bs
 
 data Careted a = a :^ Caret deriving (Eq,Ord,Show,Data,Generic)
@@ -446,7 +476,7 @@ addSpan s e r = drawSpan s e .# r
 -- >>> unAnnotate (prettyRendering (addSpan (Columns 35 35) (Columns 38 38) exampleRendering))
 -- 1 | int main(int argc, char ** argv) { int; }<EOF>
 --   |                                    ~~~
-data Span = Span !Delta !Delta {-# UNPACK #-} !ByteString deriving (Eq,Ord,Show,Data,Generic)
+data Span = Span !Delta !Delta {-# UNPACK #-} !Text deriving (Eq,Ord,Show,Data,Generic)
 
 class HasSpan t where
   span :: Lens' t Span
@@ -513,7 +543,7 @@ addFixit s e rpl r = drawFixit s e rpl .# r
 data Fixit = Fixit
   { _fixitSpan :: {-# UNPACK #-} !Span
     -- ^ 'Span' where the error occurred
-  , _fixitReplacement :: !ByteString
+  , _fixitReplacement :: !Text
     -- ^ Replacement suggestion
   } deriving (Eq,Ord,Show,Data,Generic)
 
@@ -528,4 +558,4 @@ instance Reducer Fixit Rendering where
   unit = render
 
 instance Renderable Fixit where
-  render (Fixit (Span s e bs) r) = addFixit s e (UTF8.toString r) $ rendered s bs
+  render (Fixit (Span s e bs) r) = addFixit s e (T.unpack r) $ rendered s bs

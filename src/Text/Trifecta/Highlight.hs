@@ -38,7 +38,8 @@ import qualified Text.Blaze.Html5 as Html5
 import Text.Blaze.Html5.Attributes hiding (title,id)
 import Text.Blaze.Internal (MarkupM(Empty, Leaf))
 import Text.Parser.Token.Highlight
-import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Data.Text.Lazy as L
+import Data.Text.Internal.Lazy.Search as LSearch
 
 import Text.Trifecta.Delta
 import Text.Trifecta.Rope
@@ -90,17 +91,17 @@ instance Ord (Located a) where
 
 instance ToMarkup HighlightedRope where
   toMarkup (HighlightedRope intervals r) = Html5.pre $ go 0 lbs effects where
-    lbs = L.fromChunks [bs | Strand bs _ <- F.toList (strands r)]
+    lbs = L.fromChunks [txt | Strand txt _ <- F.toList (strands r)]
     ln no = Html5.a ! name (toValue $ "line-" ++ show no) $ emptyMarkup
     effects = sort $ [ i | (Interval lo hi, tok) <- intersections mempty (delta r) intervals
                      , i <- [ (leafMarkup "span" "<span" ">" ! class_ (toValue $ show tok)) :@ bytes lo
                             , preEscapedToHtml ("</span>" :: String) :@ bytes hi
                             ]
-                     ] ++ imap (\k i -> ln k :@ i) (L.elemIndices '\n' lbs)
-    go _ cs [] = unsafeLazyByteString cs
+                     ] ++ imap (\k i -> ln k :@ i) (LSearch.indices "\n" lbs)
+    go _ cs [] = lazyText cs
     go b cs ((eff :@ eb) : es)
       | eb <= b = eff >> go b cs es
-      | otherwise = unsafeLazyByteString om >> go eb nom es
+      | otherwise = lazyText om >> go eb nom es
          where (om,nom) = L.splitAt (fromIntegral (eb - b)) cs
 
     emptyMarkup = Empty ()
