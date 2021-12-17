@@ -18,8 +18,6 @@ module Text.Trifecta.Util.Combinators
   , (<$!>)
   ) where
 
---import Data.ByteString      as Strict
---import Data.ByteString.Lazy as Lazy
 import Data.Text as Strict
 import Data.Text.Lazy as Lazy
 import Data.Text.Internal.Fusion as Stream

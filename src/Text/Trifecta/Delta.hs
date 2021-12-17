@@ -34,7 +34,6 @@ import Data.Data
 import Data.Word
 import Data.Function (on)
 import Data.FingerTree hiding (empty)
-import Data.ByteString as Strict hiding (empty)
 import Data.Text as StrictTxt hiding(empty)
 import Data.Text.Unsafe
 import GHC.Generics
@@ -44,9 +43,6 @@ import Text.Trifecta.Util.Pretty
 
 class HasBytes t where
   bytes :: t -> Int64
-
-instance HasBytes ByteString where
-  bytes = fromIntegral . Strict.length
 
 instance HasBytes Text where
   bytes = fromIntegral . lengthWord16
@@ -219,9 +215,6 @@ instance HasDelta Word8 where
     | n <= 0x7f              = Columns 1 1
     | n >= 0xc0 && n <= 0xf4 = Columns 1 1
     | otherwise              = Columns 0 1
-
-instance HasDelta ByteString where
-  delta = foldMap delta . Strict.unpack
 
 instance HasDelta Text where
   delta = StrictTxt.foldr (\c m -> delta c <> m) mempty

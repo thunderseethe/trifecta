@@ -270,9 +270,6 @@ instance Source String where
       go n (x:xs)    = x : go (n + 1) xs
       go _ []        = []-}
 
---instance Source ByteString where
---  source = source . UTF8.toString
-
 instance Source Text where
   source s
     | Just _ <- T.find (== '\n') s = (ls, bs, draw [] 0 0 s')

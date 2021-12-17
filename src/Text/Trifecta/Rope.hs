@@ -32,11 +32,6 @@ module Text.Trifecta.Rope
 import           Data.Text              (Text)
 import qualified Data.Text              as Strict
 import qualified Data.Text.Lazy         as Lazy
-
---import           Data.ByteString        (ByteString)
---import qualified Data.ByteString        as Strict
---import qualified Data.ByteString.Lazy   as Lazy
---import qualified Data.ByteString.UTF8   as UTF8
 import           Data.Data
 import           Data.FingerTree        as FingerTree
 import           Data.Foldable          (toList)
