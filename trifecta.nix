@@ -7,7 +7,7 @@
 }:
 mkDerivation {
   pname = "trifecta";
-  version = "2.2.2";
+  version = "3.0.0";
   src = ./.;
   libraryHaskellDepends = [
     ansi-terminal array base blaze-builder blaze-html blaze-markup

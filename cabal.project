@@ -1,2 +1,80 @@
 packages: .
           ./examples
+
+constraints: text >= 2.0
+
+allow-newer:
+  attoparsec-iso8601:text,
+  aws:attoparsec,
+  blaze-builder:text,
+  blaze-html:text,
+  blaze-markup:text,
+  cassava:text,
+  concurrent-output:text,
+  errors:text,
+  feed:text,
+  haddock-library:text,
+  hslua-classes:text,
+  hslua-core:text,
+  hslua-marshalling:text,
+  hslua-module-path:text,
+  hslua-module-system:text,
+  hslua-module-text:text,
+  hslua-module-version:text,
+  hslua-objectorientation:text,
+  hslua-packaging:text,
+  hslua:text,
+  HsYAML:text,
+  http-api-data:text,
+  jira-wiki-markup:text,
+  lens:text,
+  megaparsec:text,
+  pandoc-lua-marshal:text,
+  pandoc:text,
+  regex-tdfa:text,
+  reducers:text,
+  scientific:text,
+  strict:text,
+  tasty-lua:text,
+  text-conversions:text,
+  text-short:text,
+  unicode-collation:text,
+  uuid-types:text,
+  uuid:text,
+  dhall:text,
+  turtle:text,
+  special-values:text,
+  quickcheck-instances:text,
+  foldl:text,
+  uri-encode:text,
+  serialise:text,
+  parsers:text,
+  cborg-json:text
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell/aeson
+
+source-repository-package
+  type: git
+  location: https://github.com/Bodigrim/aws
+
+source-repository-package
+  type: git
+  location: https://github.com/Bodigrim/text-manipulate
+
+source-repository-package
+  type: git
+  location: https://github.com/Bodigrim/text-metrics
+
+--source-repository-package
+--  type: git
+--  location: https://github.com/brandon-leapyear/persistent
+--  tag: 965f6632e74e0b30db403965277cd1b3aa9d222b
+--  subdir: persistent
+
+--source-repository-package
+--  type: git
+--  location: https://github.com/brandon-leapyear/persistent
+--  tag: 965f6632e74e0b30db403965277cd1b3aa9d222b
+--  subdir: persistent-sqlite

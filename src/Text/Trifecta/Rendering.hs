@@ -277,9 +277,8 @@ instance Source Text where
     where
       end = "<EOF>"
       s' = unstreamList $ go $ stream s
-      bs = fromIntegral $ lengthWord16 $ T.takeWhile (/='\n') s
-      ls = fromIntegral $ P.length s'
-      
+      bs = fromIntegral $ lengthWord8 $ T.takeWhile (/='\n') s
+      ls = fromIntegral $ P.length s' 
       
       go (Stream next0 s0 _) =
         let

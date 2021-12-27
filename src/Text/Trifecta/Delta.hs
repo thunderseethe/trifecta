@@ -45,7 +45,7 @@ class HasBytes t where
   bytes :: t -> Int64
 
 instance HasBytes Text where
-  bytes = fromIntegral . lengthWord16
+  bytes = fromIntegral . lengthWord8
 
 instance (Measured v a, HasBytes v) => HasBytes (FingerTree v a) where
   bytes = bytes . measure
